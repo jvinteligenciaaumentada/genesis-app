@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GÉNESIS - Acceso a la Aplicación</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Inter', 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #60a5fa 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    .container {
+      width: 100%;
+      max-width: 500px;
+    }
+    .card {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      text-align: center;
+    }
+    h1 {
+      font-size: 3em;
+      color: #1e3a8a;
+      margin-bottom: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+    .subtitle {
+      color: #64748b;
+      font-size: 1.1em;
+      margin-bottom: 30px;
+      font-style: italic;
+    }
+    .form-section {
+      margin: 30px 0;
+    }
+    h2 {
+      color: #334155;
+      font-size: 1.5em;
+      margin-bottom: 15px;
+    }
+    .info {
+      color: #64748b;
+      font-size: 0.9em;
+      margin-bottom: 25px;
+      line-height: 1.6;
+    }
+    input {
+      width: 100%;
+      padding: 15px;
+      margin: 10px 0;
+      border: 2px solid #e2e8f0;
+      border-radius: 10px;
+      font-size: 1em;
+      transition: all 0.3s;
+    }
+    input:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    button {
+      width: 100%;
+      padding: 15px;
+      margin: 20px 0 10px;
+      background: linear-gradient(135deg, #3b82f6 0%, #1e3a8a 100%);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 1.1em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(59, 130, 246, 0.4);
+    }
+    #message {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 10px;
+      font-weight: 500;
+      display: none;
+    }
+    #message.success {
+      background: #d1fae5;
+      color: #065f46;
+      border: 1px solid #34d399;
+      display: block;
+    }
+    #message.error {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #f87171;
+      display: block;
+    }
+    .app-main {
+      margin: 30px 0;
+      padding: 20px;
+      background: #f8fafc;
+      border-radius: 10px;
+      text-align: left;
+    }
+    footer {
+      margin-top: 30px;
+      text-align: center;
+      color: white;
+      font-size: 0.9em;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    #session-info {
+      background: #f1f5f9;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 15px 0;
+      font-size: 0.9em;
+      color: #475569;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h1>GÉNESIS</h1>
+      <p class="subtitle">El Arquitecto de la Información</p>
+      <div id="login-form" class="form-section">
+        <h2>Ingresa tu Clave de Acceso</h2>
+        <p class="info">La clave de acceso semanal está disponible los viernes de 17:00 a 19:00</p>
+        <input type="text" id="access-key" placeholder="Ingresa tu clave" maxlength="8" />
+        <input type="text" id="user-label" placeholder="Tu nombre (opcional)" />
+        <button onclick="validateAccess()">Acceder</button>
+        <div id="message"></div>
+      </div>
+      <div id="app-content" style="display:none;">
+        <h2>Bienvenido a GÉNESIS</h2>
+        <p>Tu sesión está activa</p>
+        <div id="session-info"></div>
+        <div class="app-main">
+          <h3>Acceso concedido</h3>
+          <p>Aquí va el contenido principal de tu aplicación...</p>
+        </div>
+        <button onclick="logout()">Cerrar Sesión</button>
+      </div>
+    </div>
+    <footer>
+      <p>© 2025 GÉNESIS - El Arquitecto de la Información</p>
+    </footer>
+  </div>
+  <script>
+    const VALIDATE_URL = 'https://tdpuejxxpvccetzczyky.supabase.co/functions/v1/validate-key';
+    const TRACK_URL = 'https://tdpuejxxpvccetzczyky.supabase.co/functions/v1/track-event';
+    const SUPABASE_ANON_KEY = 'sb_publishable_-UkQxeU5SqgHMYySNwBnzg_VrDlK8rp';
+    let sessionToken = null;
+    window.addEventListener('DOMContentLoaded', () => {
+      sessionToken = localStorage.getItem('genesis_session_token');
+      if (sessionToken) checkExistingSession();
+    });
+    async function validateAccess() {
+      const accessKey = document.getElementById('access-key').value.trim().toUpperCase();
+      const userLabel = document.getElementById('user-label').value.trim() || null;
+      if (!accessKey) {
+        showMessage('Por favor ingresa una clave de acceso', 'error');
+        return;
+      }
+      try {
+        const response = await fetch(VALIDATE_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY
+          },
+          body: JSON.stringify({
+            name: 'Functions',
+            week_code: accessKey,
+            user_label: userLabel
+          })
+        });
+        const data = await response.json();
+        if (data.ok && data.session_token) {
+          sessionToken = data.session_token;
+          localStorage.setItem('genesis_session_token', sessionToken);
+          showApp(userLabel);
+          trackEvent('login', { method: 'access_key' });
+        } else {
+          showMessage(data.message || 'Clave inválida o expirada', 'error');
+        }
+      } catch (error) {
+        showMessage('Error al validar la clave: ' + error.message, 'error');
+      }
+    }
+    async function checkExistingSession() {
+      try {
+        const response = await fetch(TRACK_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY
+          },
+          body: JSON.stringify({
+            name: 'Functions',
+            session_token: sessionToken,
+            event_type: 'session_check'
+          })
+        });
+        const data = await response.json();
+        if (data.ok) {
+          showApp('Usuario');
+        } else {
+          localStorage.removeItem('genesis_session_token');
+          sessionToken = null;
+        }
+      } catch (error) {
+        localStorage.removeItem('genesis_session_token');
+        sessionToken = null;
+      }
+    }
+    async function trackEvent(eventType, metadata = {}) {
+      if (!sessionToken) return;
+      try {
+        await fetch(TRACK_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY
+          },
+          body: JSON.stringify({
+            name: 'Functions',
+            session_token: sessionToken,
+            event_type: eventType,
+            metadata
+          })
+        });
+      } catch (error) {
+        console.error('Event tracking failed:', error);
+      }
+    }
+    function showApp(userName) {
+      document.getElementById('login-form').style.display = 'none';
+      document.getElementById('app-content').style.display = 'block';
+      document.getElementById('session-info').innerHTML = `
+        <p><strong>Usuario:</strong> ${userName || 'Anónimo'}</p>
+        <p><strong>Sesión iniciada:</strong> ${new Date().toLocaleString()}</p>
+      `;
+    }
+    function logout() {
+      trackEvent('logout');
+      localStorage.removeItem('genesis_session_token');
+      sessionToken = null;
+      document.getElementById('login-form').style.display = 'block';
+      document.getElementById('app-content').style.display = 'none';
+      document.getElementById('access-key').value = '';
+      document.getElementById('user-label').value = '';
+      document.getElementById('message').innerHTML = '';
+      document.getElementById('message').style.display = 'none';
+    }
+    function showMessage(text, type) {
+      const messageDiv = document.getElementById('message');
+      messageDiv.textContent = text;
+      messageDiv.className = type;
+    }
+  </script>
+</body>
+</html>
